@@ -125,7 +125,6 @@ export default function DodgeballGame() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (phase !== "aim") return;
-    (e.target as Element).setPointerCapture?.(e.pointerId);
     setAim(toPct(e));
   };
   const onPointerMove = (e: React.PointerEvent) => {
