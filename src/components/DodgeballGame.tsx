@@ -18,14 +18,14 @@ type Kid = {
 // 앞줄/뒷줄에 겹치게 배치 + 좌우로 움직이는 범위
 const LAYOUT = [
   { x: 24, y: 51, vx: 0.16, minX: 18, maxX: 40 },
-  { x: 30, y: 50, vx: -0.12, minX: 20, maxX: 44 },
-  { x: 50, y: 49, vx: 0.1, minX: 42, maxX: 62 },
-  { x: 56, y: 50, vx: -0.18, minX: 44, maxX: 68 },
-  { x: 78, y: 51, vx: 0.14, minX: 66, maxX: 86 },
-  { x: 30, y: 62, vx: -0.2, minX: 18, maxX: 46 },
-  { x: 38, y: 63, vx: 0.22, minX: 20, maxX: 50 },
-  { x: 62, y: 63, vx: 0.17, minX: 54, maxX: 84 },
-  { x: 70, y: 62, vx: -0.15, minX: 52, maxX: 86 },
+  { x: 28, y: 51, vx: -0.12, minX: 20, maxX: 42 },
+  { x: 50, y: 50, vx: 0.1, minX: 44, maxX: 62 },
+  { x: 54, y: 50, vx: -0.18, minX: 46, maxX: 64 },
+  { x: 78, y: 51, vx: 0.14, minX: 70, maxX: 86 },
+  { x: 32, y: 62, vx: -0.2, minX: 24, maxX: 46 },
+  { x: 36, y: 62, vx: 0.22, minX: 26, maxX: 50 },
+  { x: 64, y: 62, vx: 0.17, minX: 56, maxX: 82 },
+  { x: 68, y: 62, vx: -0.15, minX: 58, maxX: 84 },
 ];
 
 const depthScale = (y: number) => 0.42 + ((y - 46) / 26) * 0.5;
@@ -119,18 +119,34 @@ export default function DodgeballGame() {
 
       const s = Math.max(0.3, Math.min(1.25, depthScale(y)));
       // 겹쳐 있는 친구들은 한 번에 여러 명 맞을 수 있어요
-      const hits = kidsRef.current.filter((k) => {
-        if (k.out) return false;
+      const inBody = (k: (typeof kidsRef.current)[number], px: number, py: number) => {
         const ks = depthScale(k.y);
-        const halfW = 5.5 * ks;
+        const halfW = 6.5 * ks;
         return (
-          x > k.x - halfW &&
-          x < k.x + halfW &&
-          y < k.y + 1 &&
-          y > k.y - 26 * ks &&
-          Math.abs(s - ks) < 0.3
+          px > k.x - halfW &&
+          px < k.x + halfW &&
+          py < k.y + 2 &&
+          py > k.y - 26 * ks
         );
-      });
+      };
+
+      const direct = kidsRef.current.filter((k) => !k.out && inBody(k, x, y) && Math.abs(s - depthScale(k.y)) < 0.35);
+
+      // 겹쳐 서 있는 친구들은 공 하나로 함께 맞아요
+      const hits = direct.length
+        ? kidsRef.current.filter(
+            (k) =>
+              !k.out &&
+              direct.some((d) => {
+                const ks = depthScale(k.y);
+                const ds = depthScale(d.y);
+                return (
+                  Math.abs(k.x - d.x) < 6.5 * (ks + ds) * 0.5 + 2 &&
+                  Math.abs(k.y - d.y) < 6
+                );
+              }),
+          )
+        : [];
 
       if (hits.length > 0) {
         const before = kidsRef.current.filter((k) => !k.out).length;
