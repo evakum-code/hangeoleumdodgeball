@@ -8,20 +8,24 @@ type Kid = {
   id: number;
   x: number;
   y: number;
+  vx: number;
+  minX: number;
+  maxX: number;
   img: string;
   out: boolean;
 };
 
-const LAYOUT: Array<{ x: number; y: number }> = [
-  { x: 22, y: 52 },
-  { x: 36, y: 50 },
-  { x: 50, y: 49 },
-  { x: 64, y: 50 },
-  { x: 78, y: 52 },
-  { x: 28, y: 62 },
-  { x: 45, y: 64 },
-  { x: 62, y: 63 },
-  { x: 76, y: 61 },
+// 앞줄/뒷줄에 겹치게 배치 + 좌우로 움직이는 범위
+const LAYOUT = [
+  { x: 24, y: 51, vx: 0.16, minX: 18, maxX: 40 },
+  { x: 30, y: 50, vx: -0.12, minX: 20, maxX: 44 },
+  { x: 50, y: 49, vx: 0.1, minX: 42, maxX: 62 },
+  { x: 56, y: 50, vx: -0.18, minX: 44, maxX: 68 },
+  { x: 78, y: 51, vx: 0.14, minX: 66, maxX: 86 },
+  { x: 30, y: 62, vx: -0.2, minX: 18, maxX: 46 },
+  { x: 38, y: 63, vx: 0.22, minX: 20, maxX: 50 },
+  { x: 62, y: 63, vx: 0.17, minX: 54, maxX: 84 },
+  { x: 70, y: 62, vx: -0.15, minX: 52, maxX: 86 },
 ];
 
 const depthScale = (y: number) => 0.42 + ((y - 46) / 26) * 0.5;
@@ -31,6 +35,9 @@ const makeKids = (): Kid[] =>
     id: i,
     x: p.x,
     y: p.y,
+    vx: p.vx,
+    minX: p.minX,
+    maxX: p.maxX,
     img: i % 2 === 0 ? kid1 : kid2,
     out: false,
   }));
@@ -44,7 +51,7 @@ export default function DodgeballGame() {
   const [aim, setAim] = useState<{ x: number; y: number } | null>(null);
   const [phase, setPhase] = useState<"aim" | "fly" | "quiz" | "done">("aim");
   const [outCount, setOutCount] = useState(0);
-  const [quiz, setQuiz] = useState<{ before: number; hitId: number } | null>(null);
+  const [quiz, setQuiz] = useState<{ before: number; hitIds: number[] } | null>(null);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -52,9 +59,40 @@ export default function DodgeballGame() {
   const kidsRef = useRef(kids);
   kidsRef.current = kids;
   const raf = useRef<number | null>(null);
+  const moveRaf = useRef<number | null>(null);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   const alive = kids.filter((k) => !k.out).length;
   const ballScale = Math.max(0.3, Math.min(1.25, depthScale(ball.y)));
+
+  // 아이들이 좌우로 움직임
+  useEffect(() => {
+    const tick = () => {
+      if (phaseRef.current === "aim" || phaseRef.current === "fly") {
+        setKids((prev) =>
+          prev.map((k) => {
+            if (k.out) return k;
+            let x = k.x + k.vx;
+            let vx = k.vx;
+            if (x < k.minX) {
+              x = k.minX;
+              vx = -vx;
+            } else if (x > k.maxX) {
+              x = k.maxX;
+              vx = -vx;
+            }
+            return { ...k, x, vx };
+          }),
+        );
+      }
+      moveRaf.current = requestAnimationFrame(tick);
+    };
+    moveRaf.current = requestAnimationFrame(tick);
+    return () => {
+      if (moveRaf.current) cancelAnimationFrame(moveRaf.current);
+    };
+  }, []);
 
   const toPct = (e: { clientX: number; clientY: number }) => {
     const r = fieldRef.current!.getBoundingClientRect();
@@ -80,7 +118,8 @@ export default function DodgeballGame() {
       setBall({ x, y });
 
       const s = Math.max(0.3, Math.min(1.25, depthScale(y)));
-      const hit = kidsRef.current.find((k) => {
+      // 겹쳐 있는 친구들은 한 번에 여러 명 맞을 수 있어요
+      const hits = kidsRef.current.filter((k) => {
         if (k.out) return false;
         const ks = depthScale(k.y);
         const halfW = 5.5 * ks;
@@ -89,13 +128,13 @@ export default function DodgeballGame() {
           x < k.x + halfW &&
           y < k.y + 1 &&
           y > k.y - 26 * ks &&
-          Math.abs(s - ks) < 0.22
+          Math.abs(s - ks) < 0.3
         );
       });
 
-      if (hit) {
+      if (hits.length > 0) {
         const before = kidsRef.current.filter((k) => !k.out).length;
-        setQuiz({ before, hitId: hit.id });
+        setQuiz({ before, hitIds: hits.map((h) => h.id) });
         setAnswer("");
         setFeedback(null);
         setPhase("quiz");
@@ -142,10 +181,11 @@ export default function DodgeballGame() {
 
   const submit = () => {
     if (!quiz) return;
-    const correct = quiz.before - 1;
-    if (Number(answer) === correct) {
-      setKids((prev) => prev.map((k) => (k.id === quiz.hitId ? { ...k, out: true } : k)));
-      setOutCount((n) => n + 1);
+    const n = quiz.hitIds.length;
+    const correct = quiz.before - n;
+    if (answer !== "" && Number(answer) === correct) {
+      setKids((prev) => prev.map((k) => (quiz.hitIds.includes(k.id) ? { ...k, out: true } : k)));
+      setOutCount((c) => c + n);
       setQuiz(null);
       setBall({ ...BALL_HOME });
       if (correct === 0) {
@@ -198,13 +238,14 @@ export default function DodgeballGame() {
               loading="lazy"
               width={672}
               height={992}
-              className="pointer-events-none absolute origin-bottom transition-all duration-500"
+              className="pointer-events-none absolute origin-bottom"
               style={{
                 left: `${k.x}%`,
                 top: `${k.y}%`,
                 width: `${11 * s}%`,
                 transform: `translate(-50%, -100%) scale(${k.out ? 0.4 : 1}) rotate(${k.out ? -75 : 0}deg)`,
                 opacity: k.out ? 0 : 1,
+                transition: "opacity .5s, scale .5s, rotate .5s",
                 filter: "drop-shadow(0 6px 6px rgba(0,0,0,.35))",
               }}
             />
@@ -268,36 +309,14 @@ export default function DodgeballGame() {
 
         {/* 계산 문제 */}
         {phase === "quiz" && quiz && (
-          <div className="absolute inset-0 flex items-center justify-center bg-foreground/45 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-3xl bg-card p-6 text-center shadow-2xl">
-              <p className="text-sm font-semibold text-primary">공이 명중했어요!</p>
-              <h2 className="mt-2 text-xl font-bold text-foreground">몇 명이 남았을까요?</h2>
-              <p className="mt-3 text-lg text-muted-foreground">
-                코트에 있던 친구 <b className="text-foreground">{quiz.before}명</b> 중에서
-                <br />
-                방금 <b className="text-foreground">1명</b>이 아웃됐어요.
-              </p>
-              <p className="mt-3 text-2xl font-bold text-foreground">
-                {quiz.before} − 1 = ?
-              </p>
-              <input
-                inputMode="numeric"
-                autoFocus
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value.replace(/\D/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && submit()}
-                className="mt-4 w-32 rounded-2xl border-2 border-input bg-background px-4 py-3 text-center text-2xl font-bold text-foreground outline-none focus:border-primary"
-                placeholder="?"
-              />
-              {feedback && <p className="mt-3 text-sm font-semibold text-destructive">{feedback}</p>}
-              <button
-                onClick={submit}
-                className="mt-4 w-full rounded-2xl bg-primary px-6 py-3 text-lg font-bold text-primary-foreground transition-transform hover:scale-[1.02]"
-              >
-                정답 확인하고 공 받기
-              </button>
-            </div>
-          </div>
+          <QuizCard
+            quiz={quiz}
+            kids={kids}
+            answer={answer}
+            setAnswer={setAnswer}
+            feedback={feedback}
+            submit={submit}
+          />
         )}
 
         {phase === "done" && (
@@ -316,6 +335,85 @@ export default function DodgeballGame() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function QuizCard({
+  quiz,
+  kids,
+  answer,
+  setAnswer,
+  feedback,
+  submit,
+}: {
+  quiz: { before: number; hitIds: number[] };
+  kids: Kid[];
+  answer: string;
+  setAnswer: (v: string) => void;
+  feedback: string | null;
+  submit: () => void;
+}) {
+  const n = quiz.hitIds.length;
+  const aliveKids = kids.filter((k) => !k.out);
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-foreground/45 p-3 backdrop-blur-sm">
+      <div className="max-h-full w-full max-w-lg overflow-auto rounded-3xl bg-card p-5 text-center shadow-2xl">
+        <p className="text-sm font-semibold text-primary">
+          공이 {n === 1 ? "명중" : `${n}명에게 명중`}했어요!
+        </p>
+        <h2 className="mt-1 text-xl font-bold text-foreground">몇 명이 남았을까요?</h2>
+
+        {/* 사람이 빠지는 그림 */}
+        <div className="mt-4 flex flex-wrap items-end justify-center gap-1 rounded-2xl bg-secondary p-3">
+          {aliveKids.map((k) => {
+            const hit = quiz.hitIds.includes(k.id);
+            return (
+              <div key={k.id} className="relative h-16 w-9">
+                <img
+                  src={k.img}
+                  alt={hit ? "아웃되는 친구" : "남는 친구"}
+                  className="h-full w-full object-contain"
+                  style={{
+                    opacity: hit ? 0.35 : 1,
+                    transform: hit ? "rotate(-25deg) translateY(6px)" : "none",
+                    filter: hit ? "grayscale(1)" : "none",
+                  }}
+                />
+                {hit && (
+                  <span className="absolute inset-0 flex items-center justify-center text-2xl font-black text-destructive">
+                    ✕
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          ✕ 표시된 {n}명이 코트 밖으로 나가요
+        </p>
+
+        <p className="mt-3 text-2xl font-bold text-foreground">
+          {quiz.before} − {n} = ?
+        </p>
+        <input
+          inputMode="numeric"
+          autoFocus
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          className="mt-3 w-32 rounded-2xl border-2 border-input bg-background px-4 py-3 text-center text-2xl font-bold text-foreground outline-none focus:border-primary"
+          placeholder="?"
+        />
+        {feedback && <p className="mt-2 text-sm font-semibold text-destructive">{feedback}</p>}
+        <button
+          onClick={submit}
+          className="mt-3 w-full rounded-2xl bg-primary px-6 py-3 text-lg font-bold text-primary-foreground transition-transform hover:scale-[1.02]"
+        >
+          정답 확인하고 공 받기
+        </button>
       </div>
     </div>
   );
