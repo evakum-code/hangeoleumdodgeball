@@ -181,7 +181,8 @@ export default function DodgeballGame() {
           alt="햇살 가득한 학교 운동장 피구 코트"
           width={1536}
           height={1024}
-          className="absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
         />
 
         {/* 상대편 코트 표시 */}
