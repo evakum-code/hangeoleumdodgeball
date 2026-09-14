@@ -54,7 +54,7 @@ export default function DodgeballGame() {
   const raf = useRef<number | null>(null);
 
   const alive = kids.filter((k) => !k.out).length;
-  const ballScale = Math.max(0.28, Math.min(1, (ball.y - 40) / 54));
+  const ballScale = Math.max(0.3, Math.min(1.25, depthScale(ball.y)));
 
   const toPct = (e: { clientX: number; clientY: number }) => {
     const r = fieldRef.current!.getBoundingClientRect();
@@ -79,7 +79,7 @@ export default function DodgeballGame() {
       y += vy;
       setBall({ x, y });
 
-      const s = Math.max(0.28, Math.min(1, (y - 40) / 54));
+      const s = Math.max(0.3, Math.min(1.25, depthScale(y)));
       const hit = kidsRef.current.find((k) => {
         if (k.out) return false;
         const ks = depthScale(k.y);
@@ -89,7 +89,7 @@ export default function DodgeballGame() {
           x < k.x + halfW &&
           y < k.y + 1 &&
           y > k.y - 26 * ks &&
-          Math.abs(s - ks) < 0.3
+          Math.abs(s - ks) < 0.22
         );
       });
 
@@ -255,7 +255,7 @@ export default function DodgeballGame() {
         </div>
 
         {phase === "aim" && (
-          <p className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-foreground/70 px-4 py-1.5 text-sm font-semibold text-background">
+          <p className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-foreground/70 px-4 py-1.5 text-sm font-semibold text-background">
             공을 잡고 던지고 싶은 방향으로 드래그하세요
           </p>
         )}
