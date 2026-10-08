@@ -24,10 +24,10 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="min-h-screen bg-secondary px-3 py-6">
+    <main className="pixel-page min-h-screen bg-background px-3 py-6 sm:py-8">
       <header className="mx-auto mb-5 max-w-5xl text-center">
-        <h1 className="text-3xl font-bold text-foreground sm:text-4xl">피구 뺄셈 게임</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="pixel-title text-2xl font-bold text-foreground sm:text-4xl">피구 뺄셈 게임</h1>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           공을 드래그해서 던지고, 남은 친구가 몇 명인지 계산해 보세요!
         </p>
       </header>
