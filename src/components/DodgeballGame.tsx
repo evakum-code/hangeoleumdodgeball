@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import courtImg from "@/assets/court.jpg";
-import kid1 from "@/assets/kid1.png";
-import kid2 from "@/assets/kid2.png";
-import ballImg from "@/assets/ball.png";
+import courtImg from "@/assets/pixel-court.jpg";
+import kid1 from "@/assets/pixel-kid1.png";
+import kid2 from "@/assets/pixel-kid2.png";
+import ballImg from "@/assets/pixel-ball.png";
+import { Button } from "@/components/ui/button";
 
 type Kid = {
   id: number;
@@ -95,7 +96,8 @@ export default function DodgeballGame() {
   }, []);
 
   const toPct = (e: { clientX: number; clientY: number }) => {
-    const r = fieldRef.current!.getBoundingClientRect();
+    const r = fieldRef.current?.getBoundingClientRect();
+    if (!r) return { ...BALL_HOME };
     return {
       x: ((e.clientX - r.left) / r.width) * 100,
       y: ((e.clientY - r.top) / r.height) * 100,
@@ -224,13 +226,13 @@ export default function DodgeballGame() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div className="pixel-game mx-auto w-full max-w-5xl">
       <div
         ref={fieldRef}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="relative aspect-[3/2] w-full touch-none overflow-hidden rounded-3xl border-4 border-card shadow-2xl select-none"
+        className="pixel-field relative aspect-[3/2] w-full touch-none overflow-hidden border-4 border-border select-none"
       >
         <img
           src={courtImg}
@@ -242,7 +244,7 @@ export default function DodgeballGame() {
         />
 
         {/* 상대편 코트 표시 */}
-        <div className="pointer-events-none absolute left-1/2 top-[44%] h-[30%] w-[86%] -translate-x-1/2 rounded-[50%] border-4 border-dashed border-white/70" />
+        <div className="pointer-events-none absolute left-1/2 top-[44%] h-[30%] w-[86%] -translate-x-1/2 border-2 border-dashed border-primary-foreground/70" />
 
         {kids.map((k) => {
           const s = depthScale(k.y);
@@ -262,7 +264,6 @@ export default function DodgeballGame() {
                 transform: `translate(-50%, -100%) scale(${k.out ? 0.4 : 1}) rotate(${k.out ? -75 : 0}deg)`,
                 opacity: k.out ? 0 : 1,
                 transition: "opacity .5s, scale .5s, rotate .5s",
-                filter: "drop-shadow(0 6px 6px rgba(0,0,0,.35))",
               }}
             />
           );
@@ -276,7 +277,7 @@ export default function DodgeballGame() {
               y1={BALL_HOME.y}
               x2={aim.x}
               y2={aim.y}
-              stroke="white"
+              stroke="var(--primary-foreground)"
               strokeWidth="0.6"
               strokeDasharray="2 2"
             />
@@ -295,30 +296,29 @@ export default function DodgeballGame() {
             top: `${ball.y}%`,
             width: `${13 * ballScale}%`,
             transform: "translate(-50%, -50%)",
-            filter: "drop-shadow(0 8px 10px rgba(0,0,0,.35))",
           }}
         />
 
         {/* HUD */}
         <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between gap-2 p-3 sm:p-4">
-          <div className="rounded-2xl bg-card/90 px-4 py-2 shadow-lg">
+          <div className="pixel-panel bg-card px-2 py-1 sm:px-4 sm:py-2">
             <p className="text-xs text-muted-foreground">남은 친구</p>
             <p className="text-2xl font-bold text-foreground">{alive}명</p>
           </div>
-          <div className="rounded-2xl bg-card/90 px-4 py-2 shadow-lg">
+          <div className="pixel-panel bg-card px-2 py-1 sm:px-4 sm:py-2">
             <p className="text-xs text-muted-foreground">내가 아웃시킨 친구</p>
             <p className="text-2xl font-bold text-foreground">{outCount}명</p>
           </div>
         </div>
 
         {phase === "aim" && (
-          <p className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-foreground/70 px-4 py-1.5 text-sm font-semibold text-background">
+          <p className="pointer-events-none absolute bottom-2 left-2 max-w-[70%] border-2 border-border bg-card px-2 py-1 text-[10px] font-semibold text-foreground sm:bottom-3 sm:left-3 sm:px-4 sm:py-1.5 sm:text-sm">
             공을 잡고 던지고 싶은 방향으로 드래그하세요
           </p>
         )}
 
         {toast && (
-          <p className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-foreground/80 px-6 py-3 text-lg font-bold text-background">
+          <p className="pixel-panel pointer-events-none absolute top-1/2 left-1/2 w-max max-w-[90%] -translate-x-1/2 -translate-y-1/2 bg-card px-4 py-3 text-center text-sm font-bold text-foreground sm:text-lg">
             {toast}
           </p>
         )}
@@ -336,18 +336,18 @@ export default function DodgeballGame() {
         )}
 
         {phase === "done" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-foreground/50 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-3xl bg-card p-8 text-center shadow-2xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-foreground/50 p-4">
+            <div className="pixel-panel w-full max-w-sm bg-card p-5 text-center sm:p-8">
               <h2 className="text-2xl font-bold text-foreground">전부 아웃! 우리 팀 승리 🎉</h2>
               <p className="mt-2 text-muted-foreground">
                 {outCount}명을 맞히고 계산도 모두 맞혔어요.
               </p>
-              <button
+              <Button
                 onClick={reset}
-                className="mt-6 w-full rounded-2xl bg-primary px-6 py-3 text-lg font-bold text-primary-foreground"
+                className="pixel-button mt-6 h-auto w-full whitespace-normal px-6 py-3 text-lg font-bold"
               >
                 다시 하기
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -375,15 +375,15 @@ function QuizCard({
   const aliveKids = kids.filter((k) => !k.out);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-foreground/45 p-3 backdrop-blur-sm">
-      <div className="max-h-full w-full max-w-lg overflow-auto rounded-3xl bg-card p-5 text-center shadow-2xl">
+    <div className="absolute inset-0 flex items-center justify-center bg-foreground/45 p-3">
+      <div className="pixel-panel max-h-full w-full max-w-lg overflow-auto bg-card p-3 text-center sm:p-5">
         <p className="text-sm font-semibold text-primary">
           공이 {n === 1 ? "명중" : `${n}명에게 명중`}했어요!
         </p>
         <h2 className="mt-1 text-xl font-bold text-foreground">몇 명이 남았을까요?</h2>
 
         {/* 사람이 빠지는 그림 */}
-        <div className="mt-4 flex flex-wrap items-end justify-center gap-1 rounded-2xl bg-secondary p-3">
+        <div className="mt-3 flex flex-wrap items-end justify-center gap-1 border-2 border-input bg-secondary p-2 sm:p-3">
           {aliveKids.map((k) => {
             const hit = quiz.hitIds.includes(k.id);
             return (
@@ -420,16 +420,17 @@ function QuizCard({
           value={answer}
           onChange={(e) => setAnswer(e.target.value.replace(/\D/g, ""))}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          className="mt-3 w-32 rounded-2xl border-2 border-input bg-background px-4 py-3 text-center text-2xl font-bold text-foreground outline-none focus:border-primary"
+          aria-label="남은 친구 수"
+          className="mt-3 w-32 border-2 border-input bg-background px-4 py-2 text-center text-2xl font-bold text-foreground outline-none focus:border-primary"
           placeholder="?"
         />
         {feedback && <p className="mt-2 text-sm font-semibold text-destructive">{feedback}</p>}
-        <button
+        <Button
           onClick={submit}
-          className="mt-3 w-full rounded-2xl bg-primary px-6 py-3 text-lg font-bold text-primary-foreground transition-transform hover:scale-[1.02]"
+          className="pixel-button mt-3 h-auto w-full whitespace-normal px-3 py-3 text-sm font-bold sm:text-lg"
         >
           정답 확인하고 공 받기
-        </button>
+        </Button>
       </div>
     </div>
   );

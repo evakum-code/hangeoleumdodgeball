@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Keep game artwork in imported assets and theme game controls through global semantic tokens; visual restyling must not change collision or subtraction logic.
