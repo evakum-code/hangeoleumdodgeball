@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import courtImg from "@/assets/pixel-court.jpg";
+import courtImg from "@/assets/bright-pixel-court.jpg";
 import kid1 from "@/assets/pixel-kid1.png";
 import kid2 from "@/assets/pixel-kid2.png";
 import ballImg from "@/assets/pixel-ball.png";
